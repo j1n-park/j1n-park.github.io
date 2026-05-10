@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A local-feeling agent, contained behind snapshots." />
+  <title>Making Pi Feel Local, Safely · Tae Jin Park</title>
+  <link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body>
+  <main><article class="shell section">
+    <nav class="article-nav" aria-label="Article navigation">
+      <a class="nav-icon-link" href="../../" aria-label="Back to home" title="Back to home"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M2.5 7.2 8 2.7l5.5 4.5" />
+    <path d="M4.2 6.7v6.1h2.6V9.4h2.4v3.4h2.6V6.7" />
+  </svg><span>Home</span></a>
+      <a class="nav-icon-link" href="../" aria-label="All thoughts" title="All thoughts"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M3 4h.01M3 8h.01M3 12h.01M6 4h7M6 8h7M6 12h7" />
+  </svg><span>All thoughts</span></a>
+    </nav>
+    <header class="article-hero">
+      <p class="eyebrow">Thought</p>
+      <h1>Making Pi Feel Local, Safely</h1>
+      <p class="lead">A local-feeling agent, contained behind snapshots.</p>
+    </header>
+    <div class="reader"><p>I wanted to run Pi like a local command.</p>
+<pre><code class="hljs language-bash">pi
+</code></pre><p>No long Docker command. No special setup for each repo. I wanted to <code>cd</code> into a project, run <code>pi</code>, and have it work.</p>
+<p>But I did not want a coding agent running directly on my host machine.</p>
+<p>A coding agent is not only a chat window. It can read files, edit files, run shell commands, install tools, and change the environment around it. Pi’s quickstart says the default tools include file read/write/edit and bash execution. It also says Pi runs in the current directory and can modify files there. It recommends Git or another checkpoint workflow if I want easy rollback. (<a href="https://pi.dev/docs/latest/quickstart" title="Quickstart · Docs">pi.dev</a>)</p>
+<p>So the question was simple:</p>
+<blockquote>
+<p>How do I make Pi feel local, without giving it my whole host machine?</p>
+</blockquote>
+<p>The answer I ended up with is a Docker-backed agent workstation.</p>
+<p>It is not a normal project devcontainer. It is a private, stateful environment for Pi, with snapshots before each run.</p>
+<h2>What I Wanted</h2>
+<p>I cared about four things.</p>
+<p>First, the command should feel local. I should be able to run <code>pi</code> from any repo.</p>
+<p>Second, the agent should be contained. It should not get my host SSH keys, GPG keys, GitHub credentials, cloud credentials, or Docker socket.</p>
+<p>Third, the environment should keep state. If the agent installs a package or configures a tool, that should still be there next time.</p>
+<p>Fourth, I wanted rollback. A stateful environment is useful, but it can also get messy. I wanted a way to go back.</p>
+<p>The model looks like this:</p>
+<pre><code class="hljs language-text">host shell
+  pi
+    ↓
+temporary Docker container
+    ↓
+Pi runs inside the container
+    ↓
+on exit, container state is committed back to the current image
+</code></pre><p>Before each run, the current image is saved as a snapshot.</p>
+<pre><code class="hljs language-text">A = current image
+
+run Pi
+
+A → B
+
+after exit:
+  B becomes current
+  A stays as a snapshot
+</code></pre><p>So the agent environment can grow over time, but it is not one-way.</p>
+<h2>Why Not a Disposable Container?</h2>
+<p>The simplest version would be this:</p>
+<pre><code class="hljs language-bash">docker run --<span class="hljs-built_in">rm</span> -it \
+  --mount <span class="hljs-built_in">type</span>=<span class="hljs-built_in">bind</span>,src=<span class="hljs-string">&quot;<span class="hljs-variable">$PWD</span>&quot;</span>,dst=/workspace,rw \
+  pi-agent-image
+</code></pre><p>That gives isolation, and it mounts the project into the container.</p>
+<p>But <code>--rm</code> throws away the container filesystem when the session ends.</p>
+<p>That is fine for a clean build environment. It is not great for an agent. An agent may install tools, add caches, set up config, or improve its own workspace over time. I did not want to lose that after every run.</p>
+<p>I also thought about putting only <code>/home/agent</code> in a Docker volume. That would keep Pi config and user caches, but it would not keep system packages such as:</p>
+<pre><code class="hljs language-bash"><span class="hljs-built_in">sudo</span> apt install cmake
+<span class="hljs-built_in">sudo</span> apt install libssl-dev
+<span class="hljs-built_in">sudo</span> apt install sqlite3
+</code></pre><p>Those live in the container filesystem.</p>
+<p>So a disposable container was too stateless.</p>
+<h2>Why Not a Persistent Container?</h2>
+<p>The other easy answer is one long-lived container.</p>
+<p>That keeps everything: packages, config, cache, login state, and local changes.</p>
+<p>But Docker mounts are fixed when the container is created.</p>
+<p>If I create the container in <code>repo-a</code>, then <code>/workspace</code> points to <code>repo-a</code>. If I later go to <code>repo-b</code>, restarting that same container does not remount <code>/workspace</code> to <code>repo-b</code>.</p>
+<p>I wanted this:</p>
+<pre><code class="hljs language-bash"><span class="hljs-built_in">cd</span> ~/code/repo-a
+pi
+<span class="hljs-comment"># works on repo-a</span>
+
+<span class="hljs-built_in">cd</span> ~/code/repo-b
+pi
+<span class="hljs-comment"># works on repo-b</span>
+</code></pre><p>A persistent container keeps state, but the workspace is stuck.</p>
+<p>So I use temporary containers, but persistent image state.</p>
+<h2>The Image Model</h2>
+<p>There are three kinds of images.</p>
+<pre><code class="hljs language-text">base image:
+  clean image built from Dockerfile
+
+current image:
+  the default Pi workstation state
+
+snapshot images:
+  older current images kept for rollback
+</code></pre><p>Each run does roughly this:</p>
+<pre><code class="hljs language-text">1. Find the target directory.
+2. Make sure the base image exists.
+3. Make sure the current image exists.
+4. Snapshot the current image.
+5. Start a temporary container from the current image.
+6. Mount the target directory at /workspace.
+7. Run Pi.
+8. Commit the container back to the current image.
+9. Remove the temporary container.
+</code></pre><p>The target directory is chosen like this:</p>
+<pre><code class="hljs language-text">if inside a Git repo:
+  mount the Git repo root to /workspace
+
+otherwise:
+  mount the current directory to /workspace
+</code></pre><p>This gives me the two things I wanted:</p>
+<pre><code class="hljs language-text">workspace:
+  changes per run
+
+agent environment:
+  keeps state across runs
+</code></pre><p><code>/workspace</code> is a bind mount. It is not saved into the image. That is important.</p>
+<p>Project changes belong to Git. Agent environment changes belong to the Docker image.</p>
+<h2>What Gets Saved</h2>
+<p>The image snapshot saves the agent environment.</p>
+<p>Saved:</p>
+<pre><code class="hljs language-text">Pi installation
+Pi login/session/config
+/home/agent
+apt-installed packages
+npm/pip/go-installed tools
+system changes under /usr, /etc, /opt, etc.
+container caches
+</code></pre><p>Not saved:</p>
+<pre><code class="hljs language-text">/workspace project files
+</code></pre><p>Rollback is split in two:</p>
+<pre><code class="hljs language-text">Agent environment rollback:
+  Docker image snapshots
+
+Project source rollback:
+  Git
+</code></pre><p>I like this split. It keeps the two kinds of state separate.</p>
+<h2>Installing Pi</h2>
+<p>Pi can be installed through npm or the Linux/macOS installer, and login is done from inside Pi with <code>/login</code> for subscription providers. (<a href="https://pi.dev/docs/latest" title="Pi Documentation · Docs">pi.dev</a>)</p>
+<p>I do not install Pi during <code>docker build</code>.</p>
+<p>The Dockerfile only prepares the base OS and tools. The wrapper installs Pi inside the interactive container if it is missing.</p>
+<p>That keeps the base image simple. Pi itself, login state, config, and caches become part of the evolving current image.</p>
+<p>The base Dockerfile looks like this:</p>
+<pre><code class="hljs language-dockerfile"><span class="hljs-keyword">FROM</span> ubuntu:<span class="hljs-number">24.04</span>
+
+<span class="hljs-keyword">ENV</span> DEBIAN_FRONTEND=noninteractive
+
+<span class="hljs-keyword">RUN</span><span class="language-bash"> apt-get update &amp;&amp; apt-get install -y \
+    bash \
+    ca-certificates \
+    curl \
+    git \
+    jq \
+    less \
+    ripgrep \
+    <span class="hljs-built_in">sudo</span> \
+    build-essential \
+    python3 \
+    python3-pip \
+    cmake \
+    pkg-config \
+    sqlite3 \
+    libssl-dev \
+    &amp;&amp; <span class="hljs-built_in">rm</span> -rf /var/lib/apt/lists/*</span>
+
+<span class="hljs-keyword">RUN</span><span class="language-bash"> curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    &amp;&amp; apt-get update \
+    &amp;&amp; apt-get install -y nodejs \
+    &amp;&amp; node --version \
+    &amp;&amp; npm --version \
+    &amp;&amp; <span class="hljs-built_in">rm</span> -rf /var/lib/apt/lists/*</span>
+
+<span class="hljs-keyword">ARG</span> USERNAME=agent
+
+<span class="hljs-keyword">RUN</span><span class="language-bash"> groupadd <span class="hljs-string">&quot;<span class="hljs-variable">${USERNAME}</span>&quot;</span> \
+    &amp;&amp; useradd --gid <span class="hljs-string">&quot;<span class="hljs-variable">${USERNAME}</span>&quot;</span> -m -s /bin/bash <span class="hljs-string">&quot;<span class="hljs-variable">${USERNAME}</span>&quot;</span> \
+    &amp;&amp; usermod -aG <span class="hljs-built_in">sudo</span> <span class="hljs-string">&quot;<span class="hljs-variable">${USERNAME}</span>&quot;</span> \
+    &amp;&amp; <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;<span class="hljs-variable">${USERNAME}</span> ALL=(ALL) NOPASSWD:ALL&quot;</span> &gt; <span class="hljs-string">&quot;/etc/sudoers.d/<span class="hljs-variable">${USERNAME}</span>&quot;</span> \
+    &amp;&amp; <span class="hljs-built_in">chmod</span> 0440 <span class="hljs-string">&quot;/etc/sudoers.d/<span class="hljs-variable">${USERNAME}</span>&quot;</span></span>
+
+<span class="hljs-keyword">USER</span> ${USERNAME}
+<span class="hljs-keyword">WORKDIR</span><span class="language-bash"> /workspace</span>
+
+<span class="hljs-keyword">ENV</span> HOME=/home/${USERNAME}
+<span class="hljs-keyword">ENV</span> PATH=/home/${USERNAME}/.local/bin:/home/${USERNAME}/.npm-global/bin:${PATH}
+
+<span class="hljs-keyword">CMD</span><span class="language-bash"> [<span class="hljs-string">&quot;/bin/bash&quot;</span>]</span>
+</code></pre><p>At runtime, the wrapper does this if Pi is missing:</p>
+<pre><code class="hljs language-bash"><span class="hljs-keyword">if</span> ! <span class="hljs-built_in">command</span> -v pi &gt;/dev/null 2&gt;&amp;1; <span class="hljs-keyword">then</span>
+  curl -fsSL https://pi.dev/install.sh | sh
+<span class="hljs-keyword">fi</span>
+
+<span class="hljs-built_in">exec</span> pi <span class="hljs-string">&quot;<span class="hljs-variable">$@</span>&quot;</span>
+</code></pre><h2>Login State</h2>
+<p>Pi stores auth state under the user’s home directory. The provider docs mention <code>~/.pi/agent/auth.json</code> for stored credentials and refresh state. (<a href="https://pi.dev/docs/latest/providers" title="Providers · Docs">pi.dev</a>)</p>
+<p>In this setup, that file lives inside the image state.</p>
+<p>That is convenient, but it also means the images are private. They may contain login state, config, caches, and other personal data.</p>
+<p>I do not push these images to a registry. I treat them like local workstation state.</p>
+<h2>Boundaries</h2>
+<p>The wrapper does not mount my host home directory.</p>
+<p>It also clears common credential environment variables:</p>
+<pre><code class="hljs language-text">GITHUB_TOKEN
+GH_TOKEN
+SSH_AUTH_SOCK
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_SESSION_TOKEN
+GOOGLE_APPLICATION_CREDENTIALS
+KUBECONFIG
+NPM_TOKEN
+</code></pre><p>I do not mount:</p>
+<pre><code class="hljs language-text">~/.ssh
+~/.gnupg
+host Docker socket
+cloud config
+Apple signing material
+</code></pre><p>The agent can edit <code>/workspace</code> and run commands inside the container. It can install packages inside its own environment.</p>
+<p>But it cannot use my SSH key, sign commits with my GPG key, push with my GitHub credentials, access my cloud account, or control the host Docker daemon.</p>
+<p>This is containment, not perfect security. Since <code>/workspace</code> is writable, the agent can change scripts, build files, or hooks that I might later run on the host. I still need to review changes.</p>
+<h2>Commits, Signing, and Push</h2>
+<p>I am okay with the agent making unsigned commits inside the repo.</p>
+<p>I am not okay with it signing or pushing.</p>
+<p>To me, those are different actions:</p>
+<pre><code class="hljs language-text">commit:
+  local checkpoint
+
+signed commit:
+  I approve this content
+
+push:
+  publish it outside my machine
+</code></pre><p>So the split is:</p>
+<pre><code class="hljs language-text">Agent:
+  edit files
+  run tests
+  create unsigned commits
+
+Me:
+  review diff
+  sign commits
+  push
+</code></pre><p>That keeps the agent useful, but I still keep final control.</p>
+<h2>No Docker Socket</h2>
+<p>I do not mount the host Docker socket into the agent container.</p>
+<p>That would look like this:</p>
+<pre><code class="hljs language-bash">-v /var/run/docker.sock:/var/run/docker.sock
+</code></pre><p>It is tempting, because then the agent could run Docker commands.</p>
+<p>But access to the Docker socket is close to access to the host. A process can create containers, mount host paths, and escape the boundary I was trying to keep.</p>
+<p>So the agent can write Docker files and scripts:</p>
+<pre><code class="hljs language-text">Dockerfile
+docker-compose.yml
+scripts/agent/docker-build.sh
+scripts/agent/docker-test.sh
+</code></pre><p>Then I run the Docker command on the host and paste logs back if needed.</p>
+<p>The agent can help write and debug. It does not get to operate my host Docker daemon.</p>
+<h2>The Wrapper</h2>
+<p>The wrapper exposes <code>pi</code> as a shell function.</p>
+<p>A simplified version looks like this:</p>
+<pre><code class="hljs language-zsh"><span class="hljs-function"><span class="hljs-title">pi</span></span>() {
+  target=<span class="hljs-string">&quot;<span class="hljs-subst">$(_pi_target_dir)</span>&quot;</span>
+
+  _pi_ensure_base_image
+  _pi_ensure_current_image
+
+  snapshot=<span class="hljs-string">&quot;<span class="hljs-subst">$(_pi_snapshot_current)</span>&quot;</span>
+  container=<span class="hljs-string">&quot;pi-run-$$-<span class="hljs-subst">$(date +%s)</span>&quot;</span>
+
+  docker run -it \
+    --name <span class="hljs-string">&quot;<span class="hljs-variable">$container</span>&quot;</span> \
+    --workdir /workspace \
+    --mount <span class="hljs-built_in">type</span>=<span class="hljs-built_in">bind</span>,src=<span class="hljs-string">&quot;<span class="hljs-variable">$target</span>&quot;</span>,dst=/workspace,rw \
+    --<span class="hljs-built_in">env</span> HOME=/home/agent \
+    --<span class="hljs-built_in">env</span> GITHUB_TOKEN= \
+    --<span class="hljs-built_in">env</span> GH_TOKEN= \
+    --<span class="hljs-built_in">env</span> SSH_AUTH_SOCK= \
+    <span class="hljs-string">&quot;<span class="hljs-variable">$PI_AGENT_CURRENT_IMAGE</span>&quot;</span> \
+    bash -lc <span class="hljs-string">&#x27;
+      git config --global user.name &quot;Agent&quot;
+      git config --global user.email &quot;agent@example.local&quot;
+      git config --global commit.gpgsign false
+
+      if ! command -v pi &gt;/dev/null 2&gt;&amp;1; then
+        curl -fsSL https://pi.dev/install.sh | sh
+      fi
+
+      exec pi &quot;$@&quot;
+    &#x27;</span> bash <span class="hljs-string">&quot;<span class="hljs-variable">$@</span>&quot;</span>
+
+  exit_code=$?
+
+  docker commit \
+    --change <span class="hljs-string">&quot;LABEL pi.agent.previous_state=<span class="hljs-variable">$snapshot</span>&quot;</span> \
+    --change <span class="hljs-string">&quot;LABEL pi.agent.committed_at=<span class="hljs-subst">$(date -u +%Y-%m-%dT%H:%M:%SZ)</span>&quot;</span> \
+    <span class="hljs-string">&quot;<span class="hljs-variable">$container</span>&quot;</span> <span class="hljs-string">&quot;<span class="hljs-variable">$PI_AGENT_CURRENT_IMAGE</span>&quot;</span>
+
+  docker <span class="hljs-built_in">rm</span> <span class="hljs-string">&quot;<span class="hljs-variable">$container</span>&quot;</span>
+
+  <span class="hljs-built_in">return</span> <span class="hljs-string">&quot;<span class="hljs-variable">$exit_code</span>&quot;</span>
+}
+</code></pre><p>The real version also has helper commands:</p>
+<pre><code class="hljs language-text">pi-shell
+pi-status
+pi-snapshots
+pi-rollback
+pi-reset-system
+pi-reset-all
+pi-rebuild-base
+pi-prune
+pi-orphans
+pi-recover
+pi-clean-orphans
+pi-unlock
+</code></pre><p>Once the environment keeps state, these small tools become useful.</p>
+<h2>Failure Recovery</h2>
+<p>If the terminal closes at the wrong time, the wrapper may not reach <code>docker commit</code>.</p>
+<p>Project files are still okay because <code>/workspace</code> is a host bind mount. But container-internal state may be left inside the temporary container.</p>
+<p>So I keep commands for that:</p>
+<pre><code class="hljs language-bash">pi-orphans
+pi-recover &lt;container&gt;
+pi-clean-orphans
+</code></pre><p>That is enough for the failure mode I care about.</p>
+<p>I thought about making everything tmux-based, but that pushed the design back toward a persistent container. I prefer temporary containers with explicit recovery.</p>
+<h2>One Agent at a Time</h2>
+<p>I do not run multiple agents by default.</p>
+<p>The reason is the shared <code>current image</code>.</p>
+<p>If two sessions start from the same image and both commit back, the last one wins.</p>
+<pre><code class="hljs language-text">A starts from current
+B starts from current
+
+A exits → current = A
+B exits → current = B
+</code></pre><p>System-level changes from A can disappear.</p>
+<p>So the default is a lock: one Pi session at a time.</p>
+<p>If I want parallel work later, I would split both workspace and image state:</p>
+<pre><code class="hljs language-bash">git worktree add ../repo-agent-a -b agent/a main
+git worktree add ../repo-agent-b -b agent/b main
+
+PI_AGENT_PROFILE=a pi
+PI_AGENT_PROFILE=b pi
+</code></pre><p>That can come later.</p>
+<h2>What I Use Now</h2>
+<p>The current setup is:</p>
+<pre><code class="hljs language-text">Run:
+  pi
+
+Workspace:
+  current Git repo root or current directory mounted to /workspace
+
+Agent state:
+  Docker current image
+
+Before run:
+  snapshot current image
+
+After run:
+  commit container back to current image
+
+Rollback:
+  tag previous snapshot as current
+
+Host access:
+  no home mount
+  no SSH/GPG mount
+  no Docker socket
+  no cloud credentials
+</code></pre><p>This is the balance I wanted.</p>
+<p>Pi feels like a local command, but it does not run on my host. The agent can grow its own environment, but I can roll it back. It can edit project files, but Git handles project rollback. It gets a useful shell, but not my keys, my signing identity, or my host Docker daemon.</p>
+<h2>What I Might Improve</h2>
+<p>There are a few things I may improve later.</p>
+<p>Branching would be useful. Right now there is one current image and snapshots. Named image branches could make experiments cleaner.</p>
+<p>Image size also needs care. Committing after each run is useful, but images grow. Pruning helps, but better cleanup would be nice.</p>
+<p>Parallel work is another possible improvement. I do not want agents fighting over one workspace and one current image. But worktrees plus profile-specific images could work.</p>
+<p>Recovery could also be smoother. Orphaned containers and stale locks should be easy to inspect without remembering Docker commands.</p>
+<h2>Final Thought</h2>
+<p>The main point is that I am not building a project devcontainer.</p>
+<p>I am building a personal agent workstation.</p>
+<p>A devcontainer should usually be reproducible and mostly stateless. An agent workstation can evolve, but it needs checkpoints.</p>
+<p>So the setup is more specific than “run Pi in Docker”:</p>
+<pre><code class="hljs language-text">run Pi in Docker
+snapshot before each run
+commit after each run
+keep project files in Git
+keep host credentials out
+treat the agent environment as private local state
+</code></pre><p>It is not perfect. But it matches how I want to use a coding agent: close enough to feel local, contained enough to feel safe, and stateful enough to get better over time.</p>
+</div>
+  </article>
+  </main>
+  
+</body>
+</html>
