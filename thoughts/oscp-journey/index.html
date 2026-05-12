@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Learning to break systems, and rebuild confidence." />
+  <title>What OSCP Taught Me About Problem Solving · Tae Jin Park</title>
+  <link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body>
+  <main><article class="shell section">
+    <nav class="article-nav" aria-label="Article navigation">
+      <a class="nav-icon-link" href="../../" aria-label="Back to home" title="Back to home"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M2.5 7.2 8 2.7l5.5 4.5" />
+    <path d="M4.2 6.7v6.1h2.6V9.4h2.4v3.4h2.6V6.7" />
+  </svg><span>Home</span></a>
+      <a class="nav-icon-link" href="../" aria-label="All thoughts" title="All thoughts"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M3 4h.01M3 8h.01M3 12h.01M6 4h7M6 8h7M6 12h7" />
+  </svg><span>All thoughts</span></a>
+    </nav>
+    <header class="article-hero">
+      <p class="eyebrow">Thought</p>
+      <h1>What OSCP Taught Me About Problem Solving</h1>
+      <p class="lead">Learning to break systems, and rebuild confidence.</p>
+    </header>
+    <div class="reader"><p>I recently passed the OSCP.</p>
+<p>The certificate mattered, but not only as a line on my resume. I was going through a hard time, and OSCP became something I could hold onto: a difficult problem, a clear goal, and a way to check whether I could still push through something unfamiliar.</p>
+<p>My background is software engineering, not security. I was used to building systems, debugging issues, and making software work. OSCP asked me to look at systems from the other side: where can this break, what did the developer assume, and what happens if that assumption is wrong?</p>
+<p>That was the main reason I wanted to try it. I did not start because I had a clear plan to become a pentester. I started because I thought security would make me a better engineer.</p>
+<h2>Starting Point</h2>
+<p>I had worked as a software engineer for several years before OSCP. I was comfortable reading code, debugging systems, and following messy problems. But I did not have a pentesting background.</p>
+<p>At first, OSCP felt big. Enumeration, privilege escalation, Active Directory, web bugs, reports, lab machines — there were many pieces I did not know yet.</p>
+<p>My fear was not just failing once. It was failing and still not knowing how to improve.</p>
+<h2>The First Attempt</h2>
+<p>I bought the Learn One subscription in December, but I did not use it well at first. I read some of the PEN-200 material and barely touched the labs.</p>
+<p>So the first exam went badly.</p>
+<p>It was uncomfortable, but it helped. Before the exam, OSCP was still vague to me. After failing, I knew what was missing. Reading was not enough. I needed to solve machines, take better notes, build a method, and learn when to stop following a bad path.</p>
+<p>I had about four weeks before the second attempt.</p>
+<h2>The Four-Week Push</h2>
+<p>For the first week, I watched IppSec videos carefully. I was not trying to copy commands. I was watching how he thought: how he checked services, followed clues, avoided rabbit holes, and changed direction.</p>
+<p>After that, I practiced. I worked through machines from TJ Null’s list and Proving Grounds, mostly Linux machines. I tried to use hints as little as possible.</p>
+<p>This felt close to competitive programming. Reading an algorithm is not the same as solving a problem with it. You need to get stuck, make bad guesses, fix your thinking, and slowly build pattern recognition.</p>
+<p>OSCP was similar. Tools mattered, but the real learning happened when I was stuck and had to decide what to try next.</p>
+<p>My software engineering background helped more than I expected. Debugging, reading docs, checking assumptions, and isolating variables are useful skills. OSCP used those same skills, just in a different direction.</p>
+<h2>The Hard Parts</h2>
+<p>Privilege escalation was the hardest part for me.</p>
+<p>Initial access usually gave me something visible: ports, services, pages, versions, credentials, or odd behavior. After getting a shell, the space felt much wider. I had to look at permissions, processes, files, configs, scheduled tasks, and operating system details.</p>
+<p>It was not enough to know a list of tricks. I had to learn how to look.</p>
+<p>Notes also became important. At first, I thought I could keep enough context in my head. That did not work. When a machine took hours, I forgot what I had already tried and why I had moved on.</p>
+<p>Good notes became part of solving. They showed me what I knew, what I had tested, and where I was repeating myself.</p>
+<p>Active Directory was another weak area. I studied it, but not enough to feel strong. So my exam plan was simple: do the standalone machines first, then take what I could from AD. It was risky, but with the time I had, it was realistic.</p>
+<h2>The Exam</h2>
+<p>I started with the standalone machines.</p>
+<p>I got one machine early, which helped my confidence. Then I lost a lot of time in rabbit holes. Some paths looked promising, but they went nowhere. The longer I stayed, the harder it was to let go.</p>
+<p>Eventually I took a real break.</p>
+<p>When I came back, I started again with fewer assumptions. That helped. I found a different path and made progress.</p>
+<p>That was probably the biggest lesson from the exam: persistence is not always staring at the same place longer. Sometimes it means resetting your view and checking the basics again.</p>
+<p>Near the end, I used the remaining time to revert machines, verify my steps, and check my screenshots. I wanted the report to be reproducible, not just lucky.</p>
+<h2>Reporting</h2>
+<p>I prepared a report template before the exam. That was a good idea.</p>
+<p>During the exam, I took screenshots carefully and wrote down commands as I went. Afterward, the report was mostly turning those notes into a clear path someone else could follow.</p>
+<p>Without notes, this would have been much more stressful.</p>
+<h2>What Worked</h2>
+<p>Practice worked better than passive reading.</p>
+<p>Reading gave me words and concepts. Practice gave me intuition. I needed to feel what bad enumeration looked like. I needed to notice when I was skipping checks too quickly.</p>
+<p>I also learned not to dismiss weak signals too early. Sometimes a path is wrong. Sometimes I just tested it badly.</p>
+<p>The other thing that helped was using the background I already had. I did not need to pretend I had years of security experience. I could approach machines as systems to understand and debug.</p>
+<h2>What Did Not Work</h2>
+<p>Collecting resources can become a trap.</p>
+<p>There are always more notes, videos, cheatsheets, and writeups. They are useful, but only if they change how you work on a machine. At some point I had to stop collecting and start solving.</p>
+<p>Theory alone also did not work for me. OSCP is practical. You learn by doing the work.</p>
+<h2>Passing</h2>
+<p>When I got the result, I mostly felt quiet relief.</p>
+<p>Passing did not answer every question in my life, but it did give me one clear thing: I had taken something hard, failed once, changed how I worked, and finished it.</p>
+<p>That helped my confidence.</p>
+<p>There is a kind of confidence that does not come from things going smoothly. It comes from being stuck many times and still finding a way forward.</p>
+<p>OSCP gave me that.</p>
+<h2>Lessons</h2>
+<p>OSCP changed how I look at systems.</p>
+<p>As an engineer, I often think about what the system is supposed to do. OSCP made me ask what the system actually allows.</p>
+<p>Those are not always the same thing.</p>
+<p>It also taught me to hold my assumptions more lightly. If I am stuck, maybe I need more effort. Or maybe I am asking the wrong question.</p>
+<h2>Advice</h2>
+<p>If I were starting again, I would practice earlier.</p>
+<p>I would also take notes seriously from the beginning. Notes are not only for the report. They are part of thinking.</p>
+<p>And I would be more careful with rabbit holes. Staying with a problem matters, but so does knowing when to step back.</p>
+<p>Finally, I would use whatever background I already had. For me, that was software engineering. For someone else, it might be something different. OSCP does not require everyone to think the same way.</p>
+<h2>Closing</h2>
+<p>My OSCP path was not clean. I did not prepare well at first, and I failed my first attempt.</p>
+<p>But the failure made the problem clearer. The last month forced me to work in a more honest way.</p>
+<p>More than anything, OSCP reminded me that there is often another path, another assumption to question, or another way to look at the same system.</p>
+</div>
+  </article>
+  <section class="shell section"><p class="eyebrow">More thoughts</p><div class="article-list"><a class="article-card" href="../pi-agent-local-contained/">
+    <h3>Making Pi Feel Local, Safely</h3>
+    <p>A local-feeling agent, contained behind snapshots.</p>
+  </a></div></section></main>
+  
+</body>
+</html>
