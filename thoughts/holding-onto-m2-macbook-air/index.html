@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Why my 16GB M2 MacBook Air is still enough when paired with a Linux desktop." />
+  <title>Why I&#039;m Still Using My M2 MacBook Air · Tae Jin Park</title>
+  <link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body>
+  <main><article class="shell section">
+    <nav class="article-nav" aria-label="Article navigation">
+      <a class="nav-icon-link" href="../../" aria-label="Back to home" title="Back to home"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M2.5 7.2 8 2.7l5.5 4.5" />
+    <path d="M4.2 6.7v6.1h2.6V9.4h2.4v3.4h2.6V6.7" />
+  </svg><span>Home</span></a>
+      <a class="nav-icon-link" href="../" aria-label="All thoughts" title="All thoughts"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M3 4h.01M3 8h.01M3 12h.01M6 4h7M6 8h7M6 12h7" />
+  </svg><span>All thoughts</span></a>
+    </nav>
+    <header class="article-hero">
+      <p class="eyebrow">Thought</p>
+      <h1>Why I&#039;m Still Using My M2 MacBook Air</h1>
+      <p class="lead">Why my 16GB M2 MacBook Air is still enough when paired with a Linux desktop.</p>
+    </header>
+    <div class="reader"><p>I bought my M2 MacBook Air in 2022 with 16GB of RAM and a 1TB SSD.</p>
+<p>Every time a new MacBook rumor shows up, I still look. I configure one, check the price, and think about 32GB of memory for a while. More memory would be nice. I would not say no to it.</p>
+<p>Then I look at how I actually use this machine, and I usually close the tab.</p>
+<h2>I do not really have a laptop problem</h2>
+<p>The first thing I checked was memory pressure. Most of the time it sits around 30–40%. Swap is not doing anything scary. Neovim opens quickly. Git is fine. The browser is fine. The battery is still good.</p>
+<p>So the upgrade thought is not coming from a real problem. It is mostly just the usual feeling of wanting the newer thing.</p>
+<p>For my current setup, the Air is not the machine that does everything. It is the machine I use directly.</p>
+<h2>The laptop as a client</h2>
+<p>This feels normal to me because I spent four years at Google. There, the laptop was mostly a client. Builds and tests ran somewhere else. The laptop mattered, but not because it had to carry all the work by itself.</p>
+<p>My home setup is a small and less polished version of that.</p>
+<p>I have a Linux desktop next to the Air:</p>
+<ul>
+<li>RTX 4090</li>
+<li>128GB DDR4</li>
+<li>Ryzen 5 5600X</li>
+</ul>
+<p>The CPU is not new, and the setup is not special. It is just a Linux machine with a lot of memory and a good GPU.</p>
+<p>The MacBook is where I edit, browse, and use the terminal. The desktop is where heavier things run.</p>
+<h2>Edit locally, run remotely</h2>
+<p>I keep Neovim local on the Mac.</p>
+<p>I can edit over SSH or mosh, and for quick changes it is fine. I also still like mosh for normal terminal work. I wrote about that setup here: <a href="../making-mosh-my-default-remote-terminal/">Making Mosh My Default Remote Terminal</a>.</p>
+<p>But for my main editor, local still feels better. LSP, Telescope, Treesitter, file search — small delays there bother me more than I expected.</p>
+<p>So the source tree stays on the Mac. When I need to build, test, or run something on Linux, I sync it over.</p>
+<pre><code class="hljs language-bash">rsync -avz --delete --exclude=<span class="hljs-string">&#x27;.git&#x27;</span> \
+  ~/projects/myapp/ user@linux:/home/user/projects/myapp/
+</code></pre><p>The Linux copy is just a copy. I do not edit there, and I do not treat it as the source of truth.</p>
+<p>For branch-heavy work, git worktrees make this easier. Each branch has its own directory, and each directory can have a stable rsync target. It is boring, but it works.</p>
+<h2>When I need a Linux screen</h2>
+<p>Most of the time, a terminal is enough. When it is not, I use ThinLinc.</p>
+<p>It lets me open a real Linux desktop from the Mac over Tailscale. If I need a browser on Linux, a GUI tool, or a few terminal windows that stay in one place, I use that.</p>
+<p>I do not use ThinLinc as my main editor. The Mac is still where I type most of the code. ThinLinc is more like a window into the desktop machine.</p>
+<p>The split is simple:</p>
+<ul>
+<li>Mac for editing</li>
+<li>mosh or SSH for terminal work</li>
+<li>ThinLinc when I want the Linux desktop</li>
+<li>rsync when the code needs to run there</li>
+</ul>
+<h2>Heavy Docker use belongs on the desktop</h2>
+<p>I still use Docker on the Mac when it makes sense. For small things, it is fine.</p>
+<p>But Docker is a Linux tool at heart. On macOS it runs through a Linux VM. Usually that does not matter much, but it starts to matter when containers get heavy or stay running all day.</p>
+<p>I do not like leaving big Docker setups running on the laptop. They eat memory, wake the machine up, and slowly turn a light laptop into a small server.</p>
+<p>The desktop is better for that. It runs Docker on Linux and has 128GB of RAM, so I can leave bigger stacks running without thinking about it too much. I use it for things like Immich and Excalidraw, and also for random test services when I want a clean place to run something.</p>
+<p>This is one of the reasons the Air still feels fine. The Mac can run Docker, but it does not need to be my server, my build box, my heavy Docker host, and my laptop at the same time.</p>
+<h2>Why the 16GB Air still works</h2>
+<p>If the Air had to run everything locally, 16GB would bother me more.</p>
+<p>But it does not. Large Docker stacks, GPU work, and long Linux builds can move to the desktop. The Air only needs to stay responsive while I write code and move around projects.</p>
+<p>That is also why the fanless design has not been a problem. The machine is quiet because I am not asking it to act like a workstation all day.</p>
+<h2>The CPU is not the main point</h2>
+<p>The Ryzen 5 5600X is from 2020. It is old enough that people can call it old.</p>
+<p>For my use, it is still fine. Six cores are not amazing for huge parallel builds, but it has not been annoying enough to replace. If that changes, AM4 still gives me an easy path to a 5900X or 5950X.</p>
+<p>The GPU matters more to me anyway.</p>
+<h2>Local LLMs</h2>
+<p>The 4090 has 24GB of VRAM, which makes local coding models useful enough to keep around.</p>
+<p>I used to reach for Ollama for this kind of thing, but these days I usually run models through llama.cpp directly. It is a little more manual, but I like knowing what is actually running.</p>
+<p>The model changes from time to time, so the name is not important here. The desktop runs the model, and the Mac reaches it over Tailscale.</p>
+<p>When I want to keep a coding agent local, I point it at the llama.cpp server instead of sending everything to a hosted model.</p>
+<p>It is not a replacement for the best hosted models. For hard work, I still want the strongest model I can get. But for simple refactors, boilerplate, code search, or trying an idea, a local model on the 4090 is useful enough.</p>
+<h2>What would make me upgrade</h2>
+<p>If I lost the Linux desktop, I would probably feel differently very quickly. Then the Air would have to do everything: containers, builds, local models, and all the usual browser and editor work. In that world, 16GB would feel tight.</p>
+<p>But that is not my setup right now.</p>
+<p>Right now the Air is a portable front end to a stronger Linux machine. It has a good keyboard, good battery life, and it stays out of the way.</p>
+<p>So I am keeping it.</p>
+<p><em>M2 MacBook Air 16GB / Linux Desktop: RTX 4090, Ryzen 5 5600X, 128GB DDR4 / Tailscale / Neovim / rsync / git worktree / ThinLinc / Docker / llama.cpp / coding agents</em></p>
+</div>
+  </article>
+  <section class="shell section"><p class="eyebrow">More thoughts</p><div class="article-list"><a class="article-card" href="../pi-agent-local-contained/">
+    <h3>Making Pi Feel Local, Safely</h3>
+    <p>A local-feeling agent, contained behind snapshots.</p>
+  </a><a class="article-card" href="../oscp-journey/">
+    <h3>What OSCP Taught Me About Problem Solving</h3>
+    <p>Learning to break systems, and rebuild confidence.</p>
+  </a></div></section></main>
+  
+</body>
+</html>
