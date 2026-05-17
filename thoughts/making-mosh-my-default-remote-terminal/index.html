@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="A remote shell that stays connected, scrollable, and quiet." />
+  <title>Making Mosh My Default Remote Terminal · Tae Jin Park</title>
+  <link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body>
+  <main><article class="shell section">
+    <nav class="article-nav" aria-label="Article navigation">
+      <a class="nav-icon-link" href="../../" aria-label="Back to home" title="Back to home"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M2.5 7.2 8 2.7l5.5 4.5" />
+    <path d="M4.2 6.7v6.1h2.6V9.4h2.4v3.4h2.6V6.7" />
+  </svg><span>Home</span></a>
+      <a class="nav-icon-link" href="../" aria-label="All thoughts" title="All thoughts"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M3 4h.01M3 8h.01M3 12h.01M6 4h7M6 8h7M6 12h7" />
+  </svg><span>All thoughts</span></a>
+    </nav>
+    <header class="article-hero">
+      <p class="eyebrow">Thought</p>
+      <h1>Making Mosh My Default Remote Terminal</h1>
+      <p class="lead">A remote shell that stays connected, scrollable, and quiet.</p>
+    </header>
+    <div class="reader"><p>I wanted to use mosh as my normal remote shell, but scrollback annoyed me.</p>
+<p>When I am on a remote machine, I often need to scroll through logs, errors, or command output from a few minutes ago. With plain mosh, that did not work the way I wanted.</p>
+<p>I could have gone back to SSH. That would have been the easy answer.</p>
+<p>But I like mosh. It handles bad networks better, and it feels good for long remote sessions. I did not want to think, “Do I need SSH this time, or mosh?” every time I opened a terminal.</p>
+<p>So I kept mosh and put tmux behind it.</p>
+<pre><code class="hljs language-sh">mosh user@host -- tmux new -A -s main
+</code></pre><p>mosh handles the connection. tmux handles the session and scrollback. Ghostty stays as my local terminal.</p>
+<p>It is not the same as normal local terminal scrollback. The history lives inside tmux. For my use, that is fine.</p>
+<h2>A Small Helper</h2>
+<p>I did not want to type the full command every time, so I made a zsh function.</p>
+<pre><code class="hljs language-sh">mosh-<span class="hljs-function"><span class="hljs-title">tmux</span></span>() {
+  <span class="hljs-built_in">local</span> session=<span class="hljs-string">&quot;main&quot;</span>
+
+  <span class="hljs-keyword">if</span> [ <span class="hljs-string">&quot;<span class="hljs-variable">$1</span>&quot;</span> = <span class="hljs-string">&quot;-s&quot;</span> ]; <span class="hljs-keyword">then</span>
+    session=<span class="hljs-string">&quot;<span class="hljs-variable">$2</span>&quot;</span>
+    <span class="hljs-built_in">shift</span> 2
+  <span class="hljs-keyword">fi</span>
+
+  <span class="hljs-keyword">if</span> [ -z <span class="hljs-string">&quot;<span class="hljs-variable">$1</span>&quot;</span> ]; <span class="hljs-keyword">then</span>
+    <span class="hljs-built_in">echo</span> <span class="hljs-string">&quot;usage: mosh-tmux [-s session] user@host [tmux args...]&quot;</span> &gt;&amp;2
+    <span class="hljs-built_in">return</span> 2
+  <span class="hljs-keyword">fi</span>
+
+  <span class="hljs-built_in">local</span> target=<span class="hljs-string">&quot;<span class="hljs-variable">$1</span>&quot;</span>
+  <span class="hljs-built_in">shift</span>
+
+  <span class="hljs-built_in">command</span> mosh --no-init <span class="hljs-string">&quot;<span class="hljs-variable">$target</span>&quot;</span> -- tmux new -A -s <span class="hljs-string">&quot;<span class="hljs-variable">$session</span>&quot;</span> <span class="hljs-string">&quot;<span class="hljs-variable">$@</span>&quot;</span>
+}
+</code></pre><p>The normal case is now:</p>
+<pre><code class="hljs language-sh">mosh-tmux user@host
+</code></pre><p>If I want another tmux session:</p>
+<pre><code class="hljs language-sh">mosh-tmux -s work user@host
+</code></pre><p>I also use <code>--no-init</code>. The main scrollback still comes from tmux, but this keeps mosh startup a little less surprising in my terminal.</p>
+<h2>Making tmux Quiet</h2>
+<p>I like what tmux does. I do not like how it looks by default.</p>
+<p>The default status bar shows more than I need: hostname, time, session name, and other bits. I mostly want to know which window I am in.</p>
+<p>I first tried turning the bar off:</p>
+<pre><code class="hljs language-tmux">set -g status off
+</code></pre><p>That looked clean, but it was too clean. Once I had more than one window, I wanted a small hint.</p>
+<p>So I kept the bar and removed almost everything from it.</p>
+<pre><code class="hljs language-tmux">set -g status-left &quot;&quot;
+set -g status-right &quot;&quot;
+set -g status-left-length 0
+set -g status-right-length 0
+set -g status-justify centre
+</code></pre><p>One job: show the windows.</p>
+<h2>Matching Ghostty</h2>
+<p>I use Ghostty with Tokyo Night Night. The default tmux colors looked out of place, so I changed them.</p>
+<pre><code class="hljs language-tmux">set -g status-style &quot;bg=#1a1b26,fg=#c0caf5&quot;
+
+setw -g window-status-format &quot;#[fg=#292e42,bg=#1a1b26]#[fg=#c0caf5,bg=#292e42] #I · #{@last_command} #[fg=#292e42,bg=#1a1b26]&quot;
+
+setw -g window-status-current-format &quot;#[fg=#bb9af7,bg=#1a1b26]#[fg=#1a1b26,bg=#bb9af7,bold] #I · #{@last_command} #[fg=#bb9af7,bg=#1a1b26]&quot;
+</code></pre><p>It ends up looking roughly like this:</p>
+<pre><code class="hljs language-text"> 0 · lazydocker    1 · htop    2 · nvim    3 · ls 
+</code></pre><p>Quiet enough.</p>
+<h2>Showing the Last Command</h2>
+<p>I turned off tmux automatic rename.</p>
+<pre><code class="hljs language-tmux">set -g automatic-rename off
+set -g allow-rename off
+</code></pre><p>Automatic rename works for long-running programs like <code>nvim</code> or <code>htop</code>, but not for quick commands like <code>ls</code> or <code>git status</code>.</p>
+<p>I wanted each window to show the last command I ran. Just the command name, not the whole line.</p>
+<p>So I used zsh’s <code>preexec</code> hook and saved the command in a tmux window option.</p>
+<pre><code class="hljs language-sh"><span class="hljs-keyword">if</span> [ -n <span class="hljs-string">&quot;<span class="hljs-variable">$TMUX</span>&quot;</span> ]; <span class="hljs-keyword">then</span>
+  tmux set-option -wq @last_command <span class="hljs-string">&quot;shell&quot;</span>
+
+  <span class="hljs-function"><span class="hljs-title">preexec</span></span>() {
+    <span class="hljs-built_in">local</span> cmd=<span class="hljs-string">&quot;<span class="hljs-variable">${1%% *}</span>&quot;</span>
+    cmd=<span class="hljs-string">&quot;<span class="hljs-variable">${cmd[1,24]}</span>&quot;</span>
+    tmux set-option -wq @last_command <span class="hljs-string">&quot;<span class="hljs-variable">$cmd</span>&quot;</span>
+  }
+<span class="hljs-keyword">fi</span>
+</code></pre><p>Now the labels look like this:</p>
+<pre><code class="hljs language-text">0 · ls
+1 · htop
+2 · nvim
+3 · git
+</code></pre><p>That is enough context for me.</p>
+<h2>Keeping My Shell Config Separate</h2>
+<p>I also moved my own shell helpers into a separate file.</p>
+<pre><code class="hljs language-sh">[ -f <span class="hljs-string">&quot;<span class="hljs-variable">$HOME</span>/.my-config.zsh&quot;</span> ] &amp;&amp; <span class="hljs-built_in">source</span> <span class="hljs-string">&quot;<span class="hljs-variable">$HOME</span>/.my-config.zsh&quot;</span>
+</code></pre><p>I have lost <code>.zshrc</code> before. Rebuilding small helpers from memory is annoying. Keeping my own file separate makes it easier to back up and move around.</p>
+<h2>The Setup Now</h2>
+<p>What I use now:</p>
+<ul>
+<li>Ghostty as the local terminal</li>
+<li>mosh as the default remote connection</li>
+<li>tmux for sessions and scrollback</li>
+<li>zsh for small glue</li>
+<li>a quiet status bar with window index and last command</li>
+</ul>
+<p>I also keep one manual toggle:</p>
+<pre><code class="hljs language-tmux">bind-key B set-option -g status
+</code></pre><p>That is enough for now.</p>
+</div>
+  </article>
+  <section class="shell section"><p class="eyebrow">More thoughts</p><div class="article-list"><a class="article-card" href="../pi-agent-local-contained/">
+    <h3>Making Pi Feel Local, Safely</h3>
+    <p>A local-feeling agent, contained behind snapshots.</p>
+  </a><a class="article-card" href="../oscp-journey/">
+    <h3>What OSCP Taught Me About Problem Solving</h3>
+    <p>Learning to break systems, and rebuild confidence.</p>
+  </a><a class="article-card" href="../holding-onto-m2-macbook-air/">
+    <h3>Why I&#039;m Still Using My M2 MacBook Air</h3>
+    <p>Why my 16GB M2 MacBook Air is still enough when paired with a Linux desktop.</p>
+  </a></div></section></main>
+  
+</body>
+</html>
