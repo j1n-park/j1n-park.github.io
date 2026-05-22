@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Two simple engineering truths that took time to become real." />
+  <title>Two Lessons I Understood Later · Tae Jin Park</title>
+  <link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body>
+  <main><article class="shell section">
+    <nav class="article-nav" aria-label="Article navigation">
+      <a class="nav-icon-link" href="../../" aria-label="Back to home" title="Back to home"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M2.5 7.2 8 2.7l5.5 4.5" />
+    <path d="M4.2 6.7v6.1h2.6V9.4h2.4v3.4h2.6V6.7" />
+  </svg><span>Home</span></a>
+      <a class="nav-icon-link" href="../" aria-label="All thoughts" title="All thoughts"><svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+    <path d="M3 4h.01M3 8h.01M3 12h.01M6 4h7M6 8h7M6 12h7" />
+  </svg><span>All thoughts</span></a>
+    </nav>
+    <header class="article-hero">
+      <p class="eyebrow">Thought</p>
+      <h1>Two Lessons I Understood Later</h1>
+      <p class="lead">Two simple engineering truths that took time to become real.</p>
+    </header>
+    <div class="reader"><p>There are two phrases I heard when I was younger that still come back to me.</p>
+<blockquote>
+<p>Do not create a purpose just to use a technology.<br>
+Everything is a layer.</p>
+</blockquote>
+<p>At the time, I understood them only as words. They sounded right, but they were not mine yet. After working as an engineer for a while, I started to understand why they stayed with me.</p>
+<h2>Do Not Start From the Tool</h2>
+<p>It is easy to like tools too much.</p>
+<p>A new framework comes out. A language looks clean. A database sounds fast. A library feels elegant. Then the temptation starts: I want to use it, so I look for a reason to use it.</p>
+<p>That is where the order gets reversed.</p>
+<p>The problem should come first. The tool should come after.</p>
+<p>Good engineering is not proving that I know a tool. It is understanding the problem, the limits, the people using the system, and the cost of each choice.</p>
+<p>Sometimes the best answer is boring. Sometimes the best answer is not to use the new thing. That can feel disappointing, but it is often the more honest choice.</p>
+<p>The trap is that this mistake can look productive. It can look like learning or exploration. But if I start with the tool and build the purpose around it, the work is already pointed in the wrong direction.</p>
+<p>So I try to keep this question close:</p>
+<pre><code class="hljs language-text">Am I solving a real problem,
+or am I looking for a place to use something I like?
+</code></pre><h2>Everything Is a Layer</h2>
+<p>The second phrase is about how things are built.</p>
+<p>Almost nothing I use stands alone. Software sits on other software, which sits on operating systems, which sit on hardware. Each layer hides something and gives me something.</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What it gives me</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardware</td>
+<td>A machine that can run work</td>
+</tr>
+<tr>
+<td>Operating system</td>
+<td>Processes, memory, files, networking</td>
+</tr>
+<tr>
+<td>Language</td>
+<td>A way to write ideas without raw machine code</td>
+</tr>
+<tr>
+<td>Libraries</td>
+<td>Shared pieces I do not have to build again</td>
+</tr>
+<tr>
+<td>Applications</td>
+<td>Something people can use</td>
+</tr>
+</tbody>
+</table>
+<p>Most days I do not think about all of this. I just write code and trust the layers under me.</p>
+<p>That trust is what makes building possible. I do not need to start from zero every time. I can stand on what other people built.</p>
+<h2>Layers Have a Cost</h2>
+<p>Layers are useful, but they are not free.</p>
+<p>They hide details. They can be slow. They can leak. They can keep old decisions alive for a long time.</p>
+<table>
+<thead>
+<tr>
+<th>What layers give</th>
+<th>What layers cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Abstraction</td>
+<td>Hidden complexity</td>
+</tr>
+<tr>
+<td>Portability</td>
+<td>Overhead</td>
+</tr>
+<tr>
+<td>Reuse</td>
+<td>Dependency risk</td>
+</tr>
+<tr>
+<td>Stability</td>
+<td>Old baggage</td>
+</tr>
+<tr>
+<td>Speed of development</td>
+<td>Less control</td>
+</tr>
+</tbody>
+</table>
+<p>A clean system from zero is nice to imagine. Real systems are rarely like that. People need old programs to keep running. Businesses need old systems to stay alive. Developers need stable ground.</p>
+<p>So layers often become a way to carry the past forward.</p>
+<p>They are not always pretty. But they are how many systems survive.</p>
+<h2>What I Take From It</h2>
+<p>These two ideas now shape how I think about software.</p>
+<p>The first one keeps me from worshiping tools. Start with the problem.</p>
+<p>The second one reminds me to ask what something is standing on. What does it depend on? What does it gain? What does it cost?</p>
+<p>I did not really understand those phrases when I first heard them. Maybe that is why they stayed with me. Some lessons arrive early, and only make sense later.</p>
+</div>
+  </article>
+  <section class="shell section"><p class="eyebrow">More thoughts</p><div class="article-list"><a class="article-card" href="../pi-agent-local-contained/">
+    <h3>Making Pi Feel Local, Safely</h3>
+    <p>A local-feeling agent, contained behind snapshots.</p>
+  </a><a class="article-card" href="../oscp-journey/">
+    <h3>What OSCP Taught Me About Problem Solving</h3>
+    <p>Learning to break systems, and rebuild confidence.</p>
+  </a><a class="article-card" href="../holding-onto-m2-macbook-air/">
+    <h3>Why I&#039;m Still Using My M2 MacBook Air</h3>
+    <p>Why my 16GB M2 MacBook Air is still enough when paired with a Linux desktop.</p>
+  </a></div></section></main>
+  
+</body>
+</html>
